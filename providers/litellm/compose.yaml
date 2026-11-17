@@ -1,0 +1,29 @@
+# Optional LiteLLM proxy for troupely's OpenAI-proxy tier.
+# Runs alongside the troupely container so `ANTHROPIC_BASE_URL=http://litellm:4000`
+# resolves over the shared compose network.
+#
+#   cp config.example.yaml config.yaml      # then edit backends
+#   docker compose -f compose.yaml up -d
+#
+# Merge into the main troupely compose (same network) or run standalone + join networks.
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable   # pin a digest in production
+    container_name: troupely-litellm
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      # Backend keys + the master key — supply via a gitignored .env beside this file.
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    networks:
+      - default
+
+# To share a network with the main troupely container, run both from one compose
+# project, or attach this service to troupely's network with an external network block.

@@ -1,0 +1,10 @@
+{
+  "name": "crypto-signals",
+  "description": "Crypto signal curation — a ranked 'what's moving and why' alpha digest from trending, movers, and news. Read-only; works on CoinGecko's free API. Pairs with /loop for a recurring brief.",
+  "mcpServers": {},
+  "env": [
+    { "key": "COINGECKO_API_KEY", "prompt": "CoinGecko Pro API key (OPTIONAL — leave blank for the free API)", "required": false }
+  ],
+  "skills": ["skills/crypto-signals"],
+  "notes": "Works on CoinGecko's free API (no key). For a recurring digest, set a /loop on the persona (e.g. /loop 4h run a crypto-signals digest). Read-only — surfaces what to look at; hand a specific name to crypto-research for the deep-dive, and to a trading module to act. Best paired with crypto-research."
+}

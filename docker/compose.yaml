@@ -1,0 +1,34 @@
+# troupely — topology A (lean default): one container, N personas as N tmux sessions.
+# Opt-in topology B (per-persona isolation) is documented in docker/README.md.
+services:
+  troupely:
+    build:
+      context: ..                  # repo root, so the image can COPY plugin-patch/ etc.
+      dockerfile: docker/Dockerfile
+      args:
+        # Match your HOST uid/gid so the bind-mounted vault has matching ownership.
+        # macOS default 501/20; Linux is usually 1000/1000.
+        HOST_UID: ${HOST_UID:-501}
+        HOST_GID: ${HOST_GID:-20}
+    image: troupely:latest
+    container_name: troupely
+    restart: unless-stopped
+    init: true            # docker-init as PID 1 (reaps zombies)
+    stdin_open: true      # keep STDIN open so claude doesn't bail
+    tty: true             # allocate a TTY so tmux + claude don't think they're headless
+    volumes:
+      - ../vault:/vault   # your workspace: personas/, memory/, .claude/ (auth+state persist here)
+      # Read-only view of the repo, so the supervisor re-reads .env after `add` / setup re-runs
+      # (W4). A directory, not ../.env itself: .env is rewritten by rename, which a single-file
+      # bind mount never sees.
+      - ..:/run/troupely/host:ro
+    environment:
+      HOME: /vault
+    # Everything else (TROUPELY_PERSONAS, TROUPELY_TG_TOKEN_<PERSONA>, ANTHROPIC_*) comes from
+    # the repo-root .env written by ./setup.sh. Don't restate those keys under environment:
+    # here. A `KEY: ${KEY:-}` line is interpolated from docker/.env, which doesn't exist, so it
+    # would blank the value env_file just set.
+    env_file:
+      - ../.env           # root .env (gitignored); see .env.example. Path is compose-file-relative.
+    networks:
+      - default

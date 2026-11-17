@@ -1,0 +1,39 @@
+# LiteLLM proxy config for troupely's OpenAI-proxy tier.
+# Copy to config.yaml, fill in your backend keys (via env vars — never inline secrets),
+# and run the proxy (see README.md). Each model_name is an alias troupely references
+# from providers/profiles/litellm-openai.env (ANTHROPIC_MODEL / ANTHROPIC_DEFAULT_HAIKU_MODEL).
+#
+# Docs: https://docs.litellm.ai/docs/proxy/configs
+
+model_list:
+  # --- main model troupely uses (ANTHROPIC_MODEL=gpt-main) ---
+  - model_name: gpt-main
+    litellm_params:
+      model: openai/gpt-5
+      api_key: os.environ/OPENAI_API_KEY
+
+  # --- small/background model (ANTHROPIC_DEFAULT_HAIKU_MODEL=gpt-small) ---
+  - model_name: gpt-small
+    litellm_params:
+      model: openai/gpt-5-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  # --- examples of other backends behind the SAME troupely setup ---
+  # Swap ANTHROPIC_MODEL to one of these aliases to run on a different model:
+  - model_name: gemini-main
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: llama-local
+    litellm_params:
+      model: ollama/llama3.3
+      api_base: http://host.docker.internal:11434   # a local Ollama on the host
+
+# Optional: native fallbacks at the proxy layer (separate from Claude Code's own
+# fallbackModel chain — see providers/README.md → auto-failover). Don't over-build.
+litellm_settings:
+  fallbacks: [{ "gpt-main": ["gemini-main"] }]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY   # must match ANTHROPIC_AUTH_TOKEN in the profile

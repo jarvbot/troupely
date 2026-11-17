@@ -1,0 +1,10 @@
+{
+  "name": "linear",
+  "description": "Linear — issues, projects, comments, cycles. Project management from chat.",
+  "mcpServers": {
+    "linear": { "type": "http", "url": "https://mcp.linear.app/mcp" }
+  },
+  "env": [],
+  "skills": [],
+  "notes": "Auth is OAuth: the first time the persona uses a Linear tool, it runs the Linear login flow (no API key needed). Add the persona to your Linear workspace."
+}

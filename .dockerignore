@@ -1,0 +1,8 @@
+# build context is the repo root (docker/compose.yaml). Keep it lean.
+.git
+vault
+**/.env
+**/node_modules
+**/.venv
+*.log
+.DS_Store

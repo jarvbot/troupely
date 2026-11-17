@@ -1,0 +1,7 @@
+{
+  "_comment": "troupely memory-lint config. Relative paths resolve against the vault root; drain_dirs paths may be globs. Add compile_age / reconcile_pair / producers entries once you have the files they watch (see MEMORY-SYSTEM.md).",
+  "drain_dirs": [
+    { "path": "personas/*/inbox", "max_age_hours": 24, "ignore": [".gitkeep"] },
+    { "path": "personas/*/processing", "max_age_hours": 24, "ignore": [".gitkeep"] }
+  ]
+}

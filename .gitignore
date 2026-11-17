@@ -1,0 +1,24 @@
+# troupely — NEVER ship secrets or instance content (hard rule, design §Conventions)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*-token
+*_token
+secrets/
+**/credentials.json
+# instance/runtime content (the package ships architecture, never the instance)
+memory/*.local.md
+*.instance.md
+# runtime vault — the user's live workspace (personas, memory, OAuth creds, state).
+# Populated by setup.sh + the container; never belongs in the repo. Templates live in personas/.
+/vault/
+# build/runtime cruft
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.DS_Store
+captures/
+*.log

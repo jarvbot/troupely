@@ -1,0 +1,18 @@
+#!/bin/bash
+# troupely pre-commit secret-scan — blocks obvious real secrets from entering history.
+# Placeholders (REPLACE_ME) are allowed; real-shaped tokens are not.
+staged=$(git diff --cached --name-only)
+[ -z "$staged" ] && exit 0
+fail=0
+# patterns: real-shaped Telegram bot tokens, sk- keys, OpenRouter sk-or, AWS, private keys
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  hits=$(git show ":$f" 2>/dev/null | grep -nE \
+    '[0-9]{8,10}:[A-Za-z0-9_-]{35}|sk-[A-Za-z0-9]{20,}|sk-or-v1-[A-Za-z0-9]{40,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----' \
+    | grep -vE 'REPLACE_ME|EXAMPLE|123456789:REPLACE')
+  if [ -n "$hits" ]; then
+    echo "⛔ pre-commit: possible secret in $f:"; echo "$hits"; fail=1
+  fi
+done <<< "$staged"
+[ "$fail" = 1 ] && { echo "Commit blocked. Use placeholders (REPLACE_ME) or add to .gitignore."; exit 1; }
+exit 0

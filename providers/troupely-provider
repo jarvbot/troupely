@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# troupely-provider — quick-switch the model/provider config (pillar C7).
+#
+# A "profile" (providers/profiles/<name>.env) is a set of env vars that point Claude Code
+# at a model backend: first-party Anthropic, a native-Anthropic gateway (OpenRouter /
+# Bedrock / Vertex), or an OpenAI-compatible model via a LiteLLM proxy. Switching rewrites
+# only the provider block in the active .env — your bot tokens and other vars are untouched.
+#
+#   troupely-provider list                 # available profiles
+#   troupely-provider current              # which profile is active
+#   troupely-provider show <name>          # print a profile (secrets masked)
+#   troupely-provider use <name>           # make <name> the active provider block in .env
+#
+# After `use`, restart the container so it picks up the new .env:  docker compose up -d
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")" && pwd)"
+PROFILES_DIR="$HERE/profiles"
+ROOT="$(cd "$HERE/.." && pwd)"
+ENV_FILE="${TROUPELY_ENV_FILE:-$ROOT/.env}"
+BEGIN="# >>> troupely-provider:"   # marker prefix; full line: "<BEGIN> <name> >>>"
+END="# <<< troupely-provider <<<"
+
+die() { echo "✗ $*" >&2; exit 1; }
+[ -d "$PROFILES_DIR" ] || die "no profiles dir at $PROFILES_DIR"
+
+list_profiles() { find "$PROFILES_DIR" -maxdepth 1 -name '*.env' -exec basename {} .env \; | sort; }
+
+profile_path() {
+  local name="$1" p="$PROFILES_DIR/$1.env"
+  [ -f "$p" ] || die "unknown profile '$name'. Available: $(list_profiles | tr '\n' ' ')"
+  echo "$p"
+}
+
+# Mask the value of anything that looks secret (KEY/TOKEN/SECRET/PASSWORD), keep a hint.
+mask() {
+  sed -E 's/^([A-Za-z_]*(KEY|TOKEN|SECRET|PASSWORD))=("?)([^"]{0,4})[^"]*("?)$/\1=\3\4…(set)\5/'
+}
+
+# Every KEY assigned by ANY profile — the set the switcher owns + strips on switch.
+# (Self-maintaining: add a key to a profile and it's managed automatically.)
+managed_keys() {
+  grep -hoE '^[A-Za-z_][A-Za-z0-9_]*=' "$PROFILES_DIR"/*.env 2>/dev/null \
+    | sed 's/=$//' | sort -u
+}
+
+cmd_list() {
+  local active; active="$(active_name || true)"
+  echo "Provider profiles (active: ${active:-none}):"
+  while read -r n; do
+    [ "$n" = "$active" ] && echo "  * $n" || echo "    $n"
+  done < <(list_profiles)
+}
+
+active_name() {
+  [ -f "$ENV_FILE" ] || return 1
+  grep -m1 "^$BEGIN" "$ENV_FILE" 2>/dev/null | sed -E "s/^$BEGIN ?//; s/ ?>>>$//" | grep . || return 1
+}
+
+cmd_current() {
+  local a; a="$(active_name || true)"
+  [ -n "$a" ] && echo "$a" || echo "(no troupely-provider block in $ENV_FILE)"
+}
+
+cmd_show() { mask < "$(profile_path "$1")"; }
+
+cmd_use() {
+  local name="$1" src; src="$(profile_path "$name")"
+  touch "$ENV_FILE"
+  local tmp; tmp="$(mktemp)"
+
+  # 1) Copy existing .env minus (a) any prior troupely-provider block and (b) any loose
+  #    line assigning a managed key (so a hand-edited stray provider var can't shadow us).
+  local keys_re; keys_re="^($(managed_keys | paste -sd'|' -))="
+  awk -v b="$BEGIN" -v e="$END" -v kr="$keys_re" '
+    index($0, b) == 1 { inblk=1; next }
+    inblk && $0 == e  { inblk=0; next }
+    inblk            { next }
+    $0 ~ kr          { next }
+    { print }
+  ' "$ENV_FILE" > "$tmp"
+
+  # 2) Trim a trailing blank run, then append the fresh provider block.
+  awk 'NF{p=NR} {a[NR]=$0} END{for(i=1;i<=p;i++)print a[i]}' "$tmp" > "$tmp.2" && mv "$tmp.2" "$tmp"
+  { [ -s "$tmp" ] && echo ""; echo "$BEGIN $name >>>"; grep -vE '^\s*#' "$src" | grep -vE '^\s*$'; echo "$END"; } >> "$tmp"
+
+  mv "$tmp" "$ENV_FILE"
+  echo "✓ provider → '$name' (wrote block to $ENV_FILE)"
+  echo "  restart to apply:  docker compose up -d"
+  # Nudge on placeholders left unfilled.
+  if grep -q 'REPLACE_ME' "$src"; then
+    echo "  ⚠ '$name' has REPLACE_ME placeholders — edit $src (or the .env block) with real creds." >&2
+  fi
+}
+
+main() {
+  local cmd="${1:-list}"; shift || true
+  case "$cmd" in
+    list)              cmd_list ;;
+    current)           cmd_current ;;
+    show)              [ $# -ge 1 ] || die "usage: troupely-provider show <name>"; cmd_show "$1" ;;
+    use)               [ $# -ge 1 ] || die "usage: troupely-provider use <name>";  cmd_use "$1" ;;
+    -h|--help|help)    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *)                 die "unknown command '$cmd' (try: list | current | show <name> | use <name>)" ;;
+  esac
+}
+main "$@"

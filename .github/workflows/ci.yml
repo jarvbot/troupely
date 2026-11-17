@@ -1,0 +1,47 @@
+# troupely CI (W7). Linux only: macOS runners bill at 10x minutes on a private repo; the
+# suites are run on macOS by hand before a release (see tests/README.md).
+name: ci
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tmux shellcheck
+      - uses: oven-sh/setup-bun@v2   # runs the injected topic-gate code (test_topic_patch)
+      - name: git identity (tests make throwaway repos)
+        run: git config --global user.email ci@troupely.invalid && git config --global user.name ci
+      - name: shellcheck
+        run: shellcheck -S warning troupely.sh setup.sh lib/*.sh docker/entrypoint.sh health/*.sh framework/heartbeat/*.sh tests/*.sh
+      - name: memory linter
+        run: python3 memory/test_memory_lint.py
+      - name: unit (envfile, group-access, pair, payload sync)
+        run: bash tests/test_units.sh
+      - name: topic patch
+        run: bash tests/test_topic_patch.sh
+      - name: secret isolation
+        run: bash tests/test_secret_isolation.sh
+      - name: setup re-run
+        run: bash tests/test_setup.sh
+      - name: planning skill redline shape
+        run: bash tests/test_redline_shape.sh
+      - name: lifecycle
+        run: bash tests/test_lifecycle.sh
+
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: image builds, no-auth container holds, core three personas launch
+        run: bash tests/test_docker_guard.sh

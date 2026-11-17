@@ -1,0 +1,10 @@
+{
+  "name": "crypto-research",
+  "description": "Crypto research reports — token & theme deep-dives (market data, fundamentals, narrative, catalysts, risks, levels). Read-only; works on CoinGecko's free API, no key required.",
+  "mcpServers": {},
+  "env": [
+    { "key": "COINGECKO_API_KEY", "prompt": "CoinGecko Pro API key (OPTIONAL — leave blank for the free API)", "required": false }
+  ],
+  "skills": ["skills/crypto-research"],
+  "notes": "Works out of the box on CoinGecko's free API (no key, ~30 calls/min). Add a CoinGecko Pro/Demo key for higher limits. The persona researches via web search + market data and writes a structured report — read-only, it never touches funds."
+}

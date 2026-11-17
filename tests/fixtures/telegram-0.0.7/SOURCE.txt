@@ -1,0 +1,3 @@
+Unmodified copy of external_plugins/telegram from anthropics/claude-plugins-official
+at commit e37d307bd9f85dab6fea5dfb5e3dc146753b2d2d (Apache-2.0, see LICENSE). Used offline by
+tests/test_topic_patch.sh so the patch is tested against the real upstream file.

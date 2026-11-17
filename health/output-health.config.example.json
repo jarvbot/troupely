@@ -1,0 +1,7 @@
+{
+  "_comment": "troupely output-health config — EXAMPLE. Copy to output-health.config.json and edit. Lists the producers (pipelines, feeds, scheduled jobs) whose OUTPUT should stay fresh + non-empty. ~ expands. must_match is optional (a regex the output must contain — catches a silently-empty sub-source).",
+  "producers": [
+    { "name": "example-daily-digest", "path": "~/troupely/memory/latest-digest.md", "max_age_hours": 24, "min_bytes": 200 },
+    { "name": "example-social-feed", "path": "~/troupely/data/social-feed.json", "max_age_hours": 6, "min_bytes": 50, "must_match": "\"items\"\\s*:\\s*\\[\\s*\\{" }
+  ]
+}
